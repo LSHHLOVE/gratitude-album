@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>感恩之旅</title>
+    <script type="text/javascript">
+        // 重定向所有404页面到index.html，用于SPA路由
+        sessionStorage.redirect = location.pathname;
+        location.replace('/gratitude-album/');
+    </script>
+</head>
+<body>
+    <noscript>
+        <h1>页面重定向中...</h1>
+        <p>如果页面没有自动跳转，请<a href="/gratitude-album/">点击这里</a>。</p>
+    </noscript>
+</body>
+</html>
