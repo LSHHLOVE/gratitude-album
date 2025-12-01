@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Pages 诊断页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { margin: 5px; padding: 8px 15px; cursor: pointer; }
+        img { max-width: 200px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>GitHub Pages 资源诊断</h1>
+    
+    <div class="test" id="music-test">
+        <h2>音乐文件测试</h2>
+        <div id="music-status">测试中...</div>
+        <button onclick="testMusic('./music/11.mp3', '相对路径')">测试相对路径</button>
+        <button onclick="testMusic('/gratitude-album/music/11.mp3', '绝对路径')">测试绝对路径</button>
+        <button onclick="testMusic('https://lshhlove.github.io/gratitude-album/music/11.mp3', '完整URL')">测试完整URL</button>
+        
+        <h3>音频播放测试</h3>
+        <audio id="audio-player" controls>
+            <source src="" type="audio/mpeg">
+            您的浏览器不支持音频元素。
+        </audio>
+        <button onclick="playMusic('./music/11.mp3')">播放相对路径</button>
+        <button onclick="playMusic('/gratitude-album/music/11.mp3')">播放绝对路径</button>
+        <button onclick="playMusic('https://lshhlove.github.io/gratitude-album/music/11.mp3')">播放完整URL</button>
+    </div>
+
+    <div class="test" id="image-test">
+        <h2>图片文件测试</h2>
+        <div id="image-status">测试中...</div>
+        <button onclick="testImage('./images/1.jpg', '相对路径')">测试相对路径</button>
+        <button onclick="testImage('/gratitude-album/images/1.jpg', '绝对路径')">测试绝对路径</button>
+        <button onclick="testImage('https://lshhlove.github.io/gratitude-album/images/1.jpg', '完整URL')">测试完整URL</button>
+        
+        <h3>图片显示测试</h3>
+        <div id="image-display"></div>
+    </div>
+
+    <div class="test" id="js-test">
+        <h2>JavaScript 文件测试</h2>
+        <div id="js-status">测试中...</div>
+        <button onclick="testJS('./assets/index-VH_soZc_.js', '主JS文件')">测试主JS文件</button>
+        <button onclick="testJS('./assets/index-Do3nq40W.css', 'CSS文件')">测试CSS文件</button>
+    </div>
+
+    <div class="test" id="console-test">
+        <h2>控制台输出</h2>
+        <div id="console-output" style="background: #f8f9fa; padding: 10px; border-radius: 5px; min-height: 100px; font-family: monospace; white-space: pre-wrap;"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const output = document.getElementById('console-output');
+            output.textContent += message + '\n';
+            console.log(message);
+        }
+
+        async function testMusic(url, type) {
+            const statusDiv = document.getElementById('music-status');
+            statusDiv.innerHTML = `测试 ${type} 音乐文件: ${url}`;
+            statusDiv.className = 'test loading';
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    statusDiv.innerHTML = `✅ ${type} 音乐文件可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test success';
+                    log(`音乐文件 ${type}: 成功 (${response.status})`);
+                } else {
+                    statusDiv.innerHTML = `❌ ${type} 音乐文件不可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test error';
+                    log(`音乐文件 ${type}: 失败 (${response.status})`);
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ ${type} 音乐文件访问错误: ${error.message}`;
+                statusDiv.className = 'test error';
+                log(`音乐文件 ${type}: 错误 - ${error.message}`);
+            }
+        }
+
+        async function testImage(url, type) {
+            const statusDiv = document.getElementById('image-status');
+            statusDiv.innerHTML = `测试 ${type} 图片文件: ${url}`;
+            statusDiv.className = 'test loading';
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    statusDiv.innerHTML = `✅ ${type} 图片文件可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test success';
+                    log(`图片文件 ${type}: 成功 (${response.status})`);
+                    
+                    // 显示图片
+                    const displayDiv = document.getElementById('image-display');
+                    const img = document.createElement('img');
+                    img.src = url;
+                    img.alt = `${type} 测试图片`;
+                    img.onload = () => log(`图片 ${type}: 加载成功`);
+                    img.onerror = () => log(`图片 ${type}: 加载失败`);
+                    displayDiv.appendChild(img);
+                } else {
+                    statusDiv.innerHTML = `❌ ${type} 图片文件不可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test error';
+                    log(`图片文件 ${type}: 失败 (${response.status})`);
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ ${type} 图片文件访问错误: ${error.message}`;
+                statusDiv.className = 'test error';
+                log(`图片文件 ${type}: 错误 - ${error.message}`);
+            }
+        }
+
+        async function testJS(url, type) {
+            const statusDiv = document.getElementById('js-status');
+            statusDiv.innerHTML = `测试 ${type}: ${url}`;
+            statusDiv.className = 'test loading';
+            
+            try {
+                const response = await fetch(url);
+                if (response.ok) {
+                    statusDiv.innerHTML = `✅ ${type} 可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test success';
+                    log(`${type}: 成功 (${response.status})`);
+                } else {
+                    statusDiv.innerHTML = `❌ ${type} 不可访问 (状态码: ${response.status})`;
+                    statusDiv.className = 'test error';
+                    log(`${type}: 失败 (${response.status})`);
+                }
+            } catch (error) {
+                statusDiv.innerHTML = `❌ ${type} 访问错误: ${error.message}`;
+                statusDiv.className = 'test error';
+                log(`${type}: 错误 - ${error.message}`);
+            }
+        }
+
+        function playMusic(url) {
+            const audio = document.getElementById('audio-player');
+            audio.src = url;
+            audio.load();
+            audio.play().catch(error => {
+                log(`音频播放错误: ${error.message}`);
+            });
+            log(`尝试播放音频: ${url}`);
+        }
+
+        // 页面加载时自动测试
+        window.addEventListener('load', () => {
+            log('诊断页面已加载');
+            
+            // 自动测试所有路径
+            setTimeout(() => testMusic('./music/11.mp3', '相对路径'), 500);
+            setTimeout(() => testMusic('/gratitude-album/music/11.mp3', '绝对路径'), 1000);
+            setTimeout(() => testMusic('https://lshhlove.github.io/gratitude-album/music/11.mp3', '完整URL'), 1500);
+            
+            setTimeout(() => testImage('./images/1.jpg', '相对路径'), 2000);
+            setTimeout(() => testImage('/gratitude-album/images/1.jpg', '绝对路径'), 2500);
+            setTimeout(() => testImage('https://lshhlove.github.io/gratitude-album/images/1.jpg', '完整URL'), 3000);
+            
+            setTimeout(() => testJS('./assets/index-VH_soZc_.js', '主JS文件'), 3500);
+            setTimeout(() => testJS('./assets/index-Do3nq40W.css', 'CSS文件'), 4000);
+        });
+    </script>
+</body>
+</html>
