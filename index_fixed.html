@@ -169,13 +169,14 @@
             if (audioInitialized) return;
             
             try {
-                // 使用相对路径，兼容GitHub Pages
-                const musicPath = './music/11.mp3';
+                // 针对 GitHub Pages 优化的音乐路径
+                const musicPath = getOptimizedMusicPath();
                 
-                backgroundAudio = new Audio(musicPath);
+                backgroundAudio = new Audio();
+                backgroundAudio.src = musicPath;
                 backgroundAudio.loop = true;
                 backgroundAudio.volume = 0.5;
-                backgroundAudio.preload = 'auto';
+                backgroundAudio.preload = 'metadata';
                 
                 // 音频事件监听
                 backgroundAudio.addEventListener('loadstart', () => {
@@ -219,20 +220,63 @@
             }
         }
         
+        // 获取优化的音乐路径（针对 GitHub Pages）
+        function getOptimizedMusicPath() {
+            // 检测当前环境
+            const isGitHubPages = window.location.hostname.includes('github.io');
+            
+            if (isGitHubPages) {
+                // GitHub Pages 环境
+                const repoName = window.location.pathname.split('/')[1];
+                return `https://lshhlove.github.io/gratitude-album/music/11.mp3`;
+            } else {
+                // 本地开发环境
+                return './music/11.mp3';
+            }
+        }
+        
+        // 测试音乐文件可访问性
+        function testMusicFileAccessibility(path) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('HEAD', path, true);
+                xhr.timeout = 5000;
+                
+                xhr.onload = function() {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(true);
+                    } else {
+                        reject(new Error(`HTTP ${xhr.status}`));
+                    }
+                };
+                
+                xhr.onerror = function() {
+                    reject(new Error('Network error'));
+                };
+                
+                xhr.ontimeout = function() {
+                    reject(new Error('Timeout'));
+                };
+                
+                xhr.send();
+            });
+        }
+        
         // 尝试备用路径
         function tryAlternativePaths() {
             const alternativePaths = [
-                'music/11.mp3',
                 './music/11.mp3',
+                'music/11.mp3',
                 '/music/11.mp3',
-                'https://lshhlove.github.io/gratitude-album/music/11.mp3'
+                'https://lshhlove.github.io/gratitude-album/music/11.mp3',
+                'https://raw.githubusercontent.com/LSHHLOVE/gratitude-album/master/music/11.mp3'
             ];
             
             let currentIndex = 0;
             
             function testNextPath() {
                 if (currentIndex >= alternativePaths.length) {
-                    updateMusicStatus('❌ 所有路径都失败了', 'error');
+                    updateMusicStatus('❌ 所有路径都失败了，请检查音乐文件是否上传', 'error');
                     return;
                 }
                 
@@ -240,21 +284,22 @@
                 updateMusicStatus(`测试路径: ${path}`, 'info');
                 
                 // 测试路径可访问性
-                fetch(path, { method: 'HEAD' })
-                    .then(response => {
-                        if (response.ok) {
-                            updateMusicStatus(`✅ ${path} 可访问`, 'success');
-                            // 重新初始化音频
-                            backgroundAudio.src = path;
-                            backgroundAudio.load();
-                        } else {
-                            throw new Error(`HTTP ${response.status}`);
+                testMusicFileAccessibility(path)
+                    .then(() => {
+                        updateMusicStatus(`✅ ${path} 可访问`, 'success');
+                        // 重新初始化音频
+                        backgroundAudio.src = path;
+                        backgroundAudio.load();
+                        
+                        // 如果是用户交互后，尝试播放
+                        if (window.userInteracted) {
+                            playMusic().catch(console.error);
                         }
                     })
                     .catch(error => {
                         console.log(`路径 ${path} 测试失败:`, error);
                         currentIndex++;
-                        setTimeout(testNextPath, 1000);
+                        setTimeout(testNextPath, 1500);
                     });
             }
             
@@ -365,11 +410,16 @@
         
         // 页面加载完成后初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 标记用户是否已交互
+            window.userInteracted = false;
+            
             // 延迟初始化，确保页面完全加载
             setTimeout(initMusicPlayer, 1000);
             
             // 页面点击事件 - 用于触发自动播放
             document.addEventListener('click', function() {
+                window.userInteracted = true;
+                
                 if (!isPlaying && backgroundAudio) {
                     // 用户交互后尝试播放
                     playMusic().catch(console.error);
