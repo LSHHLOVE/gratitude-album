@@ -102,7 +102,16 @@
     // 初始化音乐播放器
     function initMusicPlayer() {
       if (!backgroundAudio) {
-        backgroundAudio = new Audio('./music/11.mp3');
+        // 根据环境选择正确的音频路径
+        let audioPath = './music/11.mp3';
+        
+        // 如果是GitHub Pages环境，使用绝对路径
+        if (window.location.hostname.includes('github.io')) {
+          audioPath = window.location.origin + '/gratitude-album/music/11.mp3';
+          console.log('GitHub Pages环境，使用绝对路径:', audioPath);
+        }
+        
+        backgroundAudio = new Audio(audioPath);
         backgroundAudio.loop = true;
         backgroundAudio.volume = 0.5;
         backgroundAudio.preload = 'auto';
@@ -110,11 +119,19 @@
         // 监听音频事件
         backgroundAudio.addEventListener('canplaythrough', () => {
           console.log('音乐已加载完成');
+          showStatus('✅ 音乐加载完成');
         });
         
         backgroundAudio.addEventListener('error', (e) => {
           console.error('音乐加载失败:', e);
           showStatus('❌ 音乐加载失败', 3000);
+          
+          // 如果失败，尝试备用路径
+          if (audioPath !== './music/11.mp3') {
+            console.log('尝试使用相对路径...');
+            backgroundAudio.src = './music/11.mp3';
+            backgroundAudio.load();
+          }
         });
         
         backgroundAudio.addEventListener('play', () => {
@@ -131,7 +148,8 @@
         setTimeout(() => {
           if (backgroundAudio) {
             backgroundAudio.play().catch(error => {
-              console.log('自动播放被阻止，等待用户交互');
+              console.log('自动播放被阻止，等待用户交互:', error.message);
+              showStatus('👆 点击页面任意位置播放音乐', 3000);
             });
           }
         }, 1000);
@@ -224,6 +242,19 @@
           toggleMusic();
         }
       });
+      
+      // GitHub Pages特定修复：延迟初始化，确保页面完全加载
+      setTimeout(() => {
+        // 检查是否是GitHub Pages环境
+        if (window.location.hostname.includes('github.io')) {
+          console.log('GitHub Pages环境检测到，应用音频修复');
+          // 重新初始化音频，使用绝对路径
+          if (backgroundAudio) {
+            backgroundAudio.src = window.location.origin + '/gratitude-album/music/11.mp3';
+            backgroundAudio.load();
+          }
+        }
+      }, 2000);
     });
     
     // 页面可见性变化时处理音乐播放
