@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>感恩之旅 - 音乐播放修复版</title>
+    <link rel="stylesheet" href="./assets/index-Do3nq40W.css">
+    <style>
+        /* 音乐播放器样式 */
+        .music-player-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            min-width: 200px;
+        }
+        
+        .music-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .music-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .music-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .music-btn:active {
+            transform: translateY(0);
+        }
+        
+        .music-btn.playing {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .volume-control span {
+            font-size: 16px;
+            color: #666;
+        }
+        
+        .volume-control input {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .volume-control input::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+        
+        .music-status {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            line-height: 1.4;
+        }
+        
+        .music-permission-hint {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-size: 12px;
+            color: #856404;
+            display: none;
+        }
+        
+        .music-permission-hint.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .music-player-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 主应用容器 -->
+    <div id="root"></div>
+    
+    <!-- 音乐播放器 -->
+    <div class="music-player-container">
+        <div class="music-controls">
+            <button class="music-btn" id="music-toggle" onclick="toggleMusic()">
+                <span id="music-icon">🎵</span>
+                <span id="music-text">播放音乐</span>
+            </button>
+            
+            <div class="volume-control">
+                <span>🔊</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" 
+                       oninput="setVolume(this.value)" onchange="setVolume(this.value)">
+            </div>
+            
+            <div class="music-status" id="music-status">
+            </div>
+            
+            <div class="music-permission-hint" id="music-hint">
+                <strong>💡 提示：</strong>为了更好的体验，请允许浏览器播放音乐
+            </div>
+        </div>
+    </div>
+
+    <!-- React应用脚本 -->
+    <script type="module" src="./assets/index-VH_soZc_.js"></script>
+    
+    <!-- 音乐播放器脚本 -->
+    <script>
+        // 音乐播放器状态
+        let backgroundAudio = null;
+        let isPlaying = false;
+        let audioInitialized = false;
+        
+        // 初始化音乐播放器
+        function initMusicPlayer() {
+            if (audioInitialized) return;
+            
+            try {
+                // 使用相对路径，兼容GitHub Pages
+                const musicPath = './music/11.mp3';
+                
+                backgroundAudio = new Audio(musicPath);
+                backgroundAudio.loop = true;
+                backgroundAudio.volume = 0.5;
+                backgroundAudio.preload = 'auto';
+                
+                // 音频事件监听
+                backgroundAudio.addEventListener('loadstart', () => {
+                    updateMusicStatus('正在加载音乐文件...', 'info');
+                });
+                
+                backgroundAudio.addEventListener('canplay', () => {
+                    updateMusicStatus('音乐可以播放了', 'success');
+                });
+                
+                backgroundAudio.addEventListener('canplaythrough', () => {
+                    updateMusicStatus('✅ 音乐已加载完成', 'success');
+                });
+                
+                backgroundAudio.addEventListener('error', (e) => {
+                    console.error('音乐加载错误:', e);
+                    updateMusicStatus('❌ 音乐加载失败', 'error');
+                    
+                    // 尝试备用路径
+                    setTimeout(() => {
+                        tryAlternativePaths();
+                    }, 2000);
+                });
+                
+                backgroundAudio.addEventListener('play', () => {
+                    isPlaying = true;
+                    updateMusicUI();
+                });
+                
+                backgroundAudio.addEventListener('pause', () => {
+                    isPlaying = false;
+                    updateMusicUI();
+                });
+                
+                audioInitialized = true;
+                updateMusicStatus('音乐播放器已初始化', 'info');
+                
+            } catch (error) {
+                console.error('初始化音乐播放器失败:', error);
+                updateMusicStatus('❌ 初始化失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 尝试备用路径
+        function tryAlternativePaths() {
+            const alternativePaths = [
+                'music/11.mp3',
+                './music/11.mp3',
+                '/music/11.mp3',
+                'https://lshhlove.github.io/gratitude-album/music/11.mp3'
+            ];
+            
+            let currentIndex = 0;
+            
+            function testNextPath() {
+                if (currentIndex >= alternativePaths.length) {
+                    updateMusicStatus('❌ 所有路径都失败了', 'error');
+                    return;
+                }
+                
+                const path = alternativePaths[currentIndex];
+                updateMusicStatus(`测试路径: ${path}`, 'info');
+                
+                // 测试路径可访问性
+                fetch(path, { method: 'HEAD' })
+                    .then(response => {
+                        if (response.ok) {
+                            updateMusicStatus(`✅ ${path} 可访问`, 'success');
+                            // 重新初始化音频
+                            backgroundAudio.src = path;
+                            backgroundAudio.load();
+                        } else {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.log(`路径 ${path} 测试失败:`, error);
+                        currentIndex++;
+                        setTimeout(testNextPath, 1000);
+                    });
+            }
+            
+            testNextPath();
+        }
+        
+        // 切换音乐播放状态
+        async function toggleMusic() {
+            if (!audioInitialized) {
+                initMusicPlayer();
+                // 等待初始化完成
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            if (isPlaying) {
+                pauseMusic();
+            } else {
+                await playMusic();
+            }
+        }
+        
+        // 播放音乐
+        async function playMusic() {
+            try {
+                if (backgroundAudio && backgroundAudio.paused) {
+                    await backgroundAudio.play();
+                    updateMusicStatus('✅ 音乐播放成功', 'success');
+                    showMusicPermissionHint();
+                }
+            } catch (error) {
+                console.error('播放失败:', error);
+                updateMusicStatus('❌ 播放失败: ' + error.message, 'error');
+                
+                // 自动播放策略限制
+                if (error.name === 'NotAllowedError') {
+                    showMusicPermissionHint();
+                }
+            }
+        }
+        
+        // 暂停音乐
+        function pauseMusic() {
+            if (backgroundAudio && !backgroundAudio.paused) {
+                backgroundAudio.pause();
+                updateMusicStatus('⏸️ 音乐已暂停', 'info');
+            }
+        }
+        
+        // 设置音量
+        function setVolume(volume) {
+            if (backgroundAudio) {
+                backgroundAudio.volume = parseFloat(volume);
+                updateMusicStatus(`音量: ${Math.round(volume * 100)}%`, 'info');
+            }
+        }
+        
+        // 更新音乐状态显示
+        function updateMusicStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('music-status');
+            if (statusDiv) {
+                statusDiv.textContent = message;
+                statusDiv.className = 'music-status';
+                
+                // 根据类型设置样式
+                if (type === 'success') {
+                    statusDiv.style.color = '#28a745';
+                    statusDiv.style.fontWeight = 'bold';
+                } else if (type === 'error') {
+                    statusDiv.style.color = '#dc3545';
+                    statusDiv.style.fontWeight = 'bold';
+                } else if (type === 'info') {
+                    statusDiv.style.color = '#17a2b8';
+                }
+            }
+        }
+        
+        // 更新音乐播放器UI
+        function updateMusicUI() {
+            const toggleBtn = document.getElementById('music-toggle');
+            const musicIcon = document.getElementById('music-icon');
+            const musicText = document.getElementById('music-text');
+            
+            if (toggleBtn && musicIcon && musicText) {
+                if (isPlaying) {
+                    musicIcon.textContent = '⏸️';
+                    musicText.textContent = '暂停音乐';
+                    toggleBtn.classList.add('playing');
+                } else {
+                    musicIcon.textContent = '🎵';
+                    musicText.textContent = '播放音乐';
+                    toggleBtn.classList.remove('playing');
+                }
+            }
+        }
+        
+        // 显示音乐权限提示
+        function showMusicPermissionHint() {
+            const hintDiv = document.getElementById('music-hint');
+            if (hintDiv) {
+                hintDiv.classList.add('show');
+                
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    hintDiv.classList.remove('show');
+                }, 5000);
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 延迟初始化，确保页面完全加载
+            setTimeout(initMusicPlayer, 1000);
+            
+            // 页面点击事件 - 用于触发自动播放
+            document.addEventListener('click', function() {
+                if (!isPlaying && backgroundAudio) {
+                    // 用户交互后尝试播放
+                    playMusic().catch(console.error);
+                }
+            });
+            
+            // 键盘快捷键支持
+            document.addEventListener('keydown', function(e) {
+                // 空格键控制播放/暂停
+                if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                    e.preventDefault();
+                    toggleMusic();
+                }
+                
+                // M键静音/取消静音
+                if (e.code === 'KeyM' && backgroundAudio) {
+                    e.preventDefault();
+                    backgroundAudio.muted = !backgroundAudio.muted;
+                    updateMusicStatus(backgroundAudio.muted ? '🔇 已静音' : '🔊 取消静音', 'info');
+                }
+            });
+            
+            // 页面可见性变化处理
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden && isPlaying) {
+                    // 页面隐藏时暂停音乐
+                    pauseMusic();
+                }
+            });
+        });
+        
+        // 导出到全局作用域，方便调试
+        window.musicPlayer = {
+            init: initMusicPlayer,
+            play: playMusic,
+            pause: pauseMusic,
+            toggle: toggleMusic,
+            setVolume: setVolume,
+            getState: () => ({ isPlaying, audioInitialized })
+        };
+    </script>
+</body>
+</html>
