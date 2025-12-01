@@ -295,6 +295,13 @@
             window.userInteracted = false;
             setTimeout(initMusicPlayer, 1000);
             
+            // 尝试自动播放音乐（延迟执行，等待用户可能的交互）
+            setTimeout(() => {
+                if (!isPlaying) {
+                    autoPlayMusic();
+                }
+            }, 2000);
+            
             // 键盘快捷键
             document.addEventListener('keydown', (e) => {
                 if (e.code === 'Space' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) {
@@ -308,6 +315,36 @@
                 if (document.hidden && isPlaying) pauseMusic();
             });
         });
+        
+        // 自动播放音乐函数
+        async function autoPlayMusic() {
+            if (!audioInitialized) {
+                initMusicPlayer();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            try {
+                // 尝试直接播放
+                await playMusic();
+                updateMusicStatus('✅ 自动播放成功', 'success');
+            } catch (error) {
+                console.log('自动播放被阻止:', error);
+                updateMusicStatus('🔇 需要用户交互才能播放', 'info');
+                
+                // 添加点击事件监听，用户点击后自动播放
+                document.addEventListener('click', function autoPlayOnClick() {
+                    if (!isPlaying) {
+                        playMusic().then(() => {
+                            updateMusicStatus('✅ 音乐已开始播放', 'success');
+                        }).catch(err => {
+                            console.error('点击后播放失败:', err);
+                        });
+                    }
+                    // 移除事件监听，避免重复触发
+                    document.removeEventListener('click', autoPlayOnClick);
+                }, { once: true });
+            }
+        }
         
         // 导出到全局作用域，方便调试
         window.musicPlayer = {
